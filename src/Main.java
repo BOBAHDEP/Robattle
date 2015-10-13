@@ -1,12 +1,16 @@
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by Вова on 08.10.2015.
  */
 public class Main {
     public static void main(String[] args) {
-        /*PlayMap map = new PlayMap();
-        Entity player1 = new Entity(7, 8, 9);
+        PlayMap map = new PlayMap();
+        Entity player1 = new Entity(7, 8, 9);  /*
         Entity player2 = new Entity(8, 8, 9);
         map.addEntity(player1);
         map.addEntity(player2);
@@ -35,7 +39,26 @@ public class Main {
                 e.printStackTrace();
             }
         }       */
-        String s = "IF (FIELD[0][1]) moveX 1";
-        Parser.parse(s, null, null);
+        try {
+            DocReader docReader = new DocReader("C:\\IDEA_Projects\\Robattle\\1.txt");
+            map.addEntity(player1);
+            map.consolePrintMap();
+            while (docReader.perform(player1, map)) {
+                map.consolePrintMap();
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+                              /*
+        String s = "moveX 1";
+        Parser.performCommand(s, player1, map);      /*
+        String a = "moveX -5";
+        System.out.println(Parser.validateMove(a));  */ /*
+        String rs = "asfdadFIELD_SIZEdvklnkFIELD_SIZE";
+        rs.replaceAll("FIELD_SIZE", "9");
+        System.out.println(rs); */
+
+
     }
 }
