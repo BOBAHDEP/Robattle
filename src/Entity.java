@@ -9,11 +9,11 @@ public class Entity {
         this.lifeLevel = lifeLevel;
     }
 
-    int condition;
-    int x, y;
-    int lifeLevel;
+    private int condition;
+    public   int x, y;
+    public int lifeLevel;
 
-    void move(int dx, int dy, PlayMap map) {
+    public void move(int dx, int dy, PlayMap map) {
         int coordinatesOfEntities[][] = map.getCoordinatesOfEntities();
         /*System.out.println(coordinatesOfEntities[0][0]);
         System.out.println(coordinatesOfEntities[0][1]);
@@ -53,23 +53,23 @@ public class Entity {
         }
     }
 
-    void addX(int dx) {
+    public void addX(int dx) {
         this.x += dx;
     }
 
-    void addY(int dy) {
+    public void addY(int dy) {
         this.y += dy;
     }
 
-    void suffer(int dLifeLevel) {
+    public void suffer(int dLifeLevel) {
         this.lifeLevel -= dLifeLevel;
     }
 
-    void die() {
+    public  void die() {
         this.condition = -1;
     }
 
-    void nextStep(int dx, int dy, int dLifeLevel) {
+    public  void nextStep(int dx, int dy, int dLifeLevel) {
         x += dx;
         y += dy;
         if (x >= PlayMap.MAX_FIELD_SIZE) {
@@ -85,5 +85,8 @@ public class Entity {
             y = 0;
         }
         lifeLevel -= dLifeLevel;
+    }
+    public void say(String speech) {
+        System.out.println(speech);
     }
 }
