@@ -21,9 +21,9 @@ public class Parser {
     private static final String SEPARATE_ARGUMENTS_IN_ATTACK = "\\s*(attackX|AttackX|attackY|AttackY)\\s*(\\d|-\\d)\\s*";
     private static final int D_LIFE_LEVEL = 1;
     //NaN
-    private static final String VALIDATE_STRING_NAN = "^(Nan)$";
+    private static final String VALIDATE_STRING_NAN = "^(Nan|\\s*)$";
     //IF ELSE
-    private static final String VALIDATE_STRING_IF_ELSE = "^(IF|IF\\s+)(\\()(\\s+F|F)(IELD)(\\[|\\s+\\[|\\[\\s+|\\s+\\[\\s+)(\\d+|-\\d+)\\s*(\\]|\\s+\\]|\\]\\s+)(\\[|\\s+\\[|\\[\\s+)(\\d+|-\\d+)(]|\\s+]|\\]\\s+)(\\s+\\)\\s+|\\)|\\)\\s+|\\s+\\))(moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\d+|\\s+\\d+|\\s+\\d+\\s+)($|(ELSE|ELSE\\s+)(moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\s+\\d+|\\d+)\\s*($))";
+    private static final String VALIDATE_STRING_IF_ELSE = "^(IF|IF\\s+)(\\()(\\s*)((FIELD)(\\[|\\s+\\[|\\[\\s+|\\s+\\[\\s+)(\\d+|-\\d+)\\s*(\\]|\\s+\\]|\\]\\s+)(\\[|\\s+\\[|\\[\\s+)(\\d+|-\\d+)(]|\\s+]|\\]\\s+)\\s*|\\s*true\\s*|\\s*false\\s*)\\)\\s*((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\d+|\\s+\\d+|\\s+\\d+\\s+)|\\s*PRINT\\s*\".*?\"\\s*)($|(ELSE|ELSE\\s+)((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\s+\\d+|\\d+)\\s*($)|\\s*PRINT\\s*\".*?\"\\s*$))";
     private static final String CHOOSE_COORDINATES_IF_ELSE = "\\[\\s*(.*?)\\s*\\]";   //FIELD[0][1] -> 0,1
     private static final String CHOOSE_FIRST_COMMAND_IF_ELSE = "\\)\\s*(.*?)($|\\s*E)";   //IF (FIELD[0][1]) moveX 1 ELSE moveY 3 -> moveX 1
     private static final String CHOOSE_SECOND_COMMAND_IN_IF_ELSE = "ELSE\\s*(.*?)\\s*$";    // -> moveY 3
@@ -42,7 +42,8 @@ public class Parser {
 
     private static final String COMMENT_ONE_Str = "(##.*?)$";
     private static final String COMMENT_TWO_Str = "#(.*?)#";
-
+    //printout
+    private static final String PRINT_COMMAND = "^\\s*PRINT\\s*\"(.*?)\"\\s*$";
 
     public static boolean parse(String command, Entity entity, PlayMap map) throws InputMismatchException{     //true - OK, next string
 
@@ -71,6 +72,23 @@ public class Parser {
         } else if (validateNaN(command)) {
             //Nothing
         } else if (validateIfElse(command)) {
+            if (command.contains("true")) {
+                Matcher matcher = Pattern.compile(CHOOSE_FIRST_COMMAND_IF_ELSE).matcher(command);
+                if(!matcher.find()) {
+                    throw new InputMismatchException(command);
+                }
+                performCommand(matcher.group(1), entity, map);
+                return true;
+            } else if (command.contains("false")) {
+                if (command.contains("ELSE")) {
+                    Matcher matcher = Pattern.compile(CHOOSE_SECOND_COMMAND_IN_IF_ELSE).matcher(command);
+                    if(!matcher.find()) {
+                        throw new InputMismatchException();
+                    }
+                    performCommand(matcher.group(1), entity, map);
+                    return true;
+                }
+            }
             List<Integer> coordinates = new ArrayList<Integer>();   //IF (FIELD[0][1]) moveX 1 ELSE attack 2 -> 0,1
             Matcher matcher = Pattern.compile(CHOOSE_COORDINATES_IF_ELSE).matcher(command);
             while(matcher.find()){
@@ -94,7 +112,13 @@ public class Parser {
                 }
                 performCommand(matcher.group(1), entity, map);
             }
-//            System.out.println(matcher.group(1));
+        } else if (validatePrint(command)) {
+            Matcher matcher = Pattern.compile(PRINT_COMMAND).matcher(command);
+            if(!matcher.find()) {
+                throw new InputMismatchException();
+            }
+            String stringToPrint = matcher.group(1);
+            entity.say(stringToPrint);
         } else {
             throw new InputMismatchException(command + " #3");
         }
@@ -112,8 +136,17 @@ public class Parser {
     private static boolean validateIfElse(String command) {
         return command.matches(VALIDATE_STRING_IF_ELSE);
     }
-    private static void performCommand(String command, Entity entity, PlayMap map) throws InputMismatchException {  //move or attack
-        Matcher matcher = Pattern.compile(SEPARATE_ARGUMENTS_IN_MOVE_OR_ATTACK).matcher(command);
+    private static void performCommand(String command, Entity entity, PlayMap map) throws InputMismatchException {  //move or attack or print
+        if (validatePrint(command)) {
+            Matcher matcher = Pattern.compile(PRINT_COMMAND).matcher(command);
+            if (!matcher.find()) {
+                throw new InputMismatchException();
+            }
+            String stringToPrint = matcher.group(1);
+            entity.say(stringToPrint);
+            return;
+        }
+        Matcher matcher = Pattern.compile(SEPARATE_ARGUMENTS_IN_MOVE_OR_ATTACK).matcher(command); //  move or attack
         if(!matcher.find()) {
             throw new InputMismatchException(command + " !matcher.find()#2");
         }
@@ -162,27 +195,35 @@ public class Parser {
         res = replaceMathUniqueOperation('/', res);
         res = replaceMathUniqueOperation('+', res);
         res = replaceMathUniqueOperation('-', res);
+        res = replaceMathUniqueOperation('=', res);
+        res = replaceMathUniqueOperation('^', res);
         return res;
     }
     private static String replaceMathUniqueOperation(char operation, String command) {
         String regEx = REPLACE_OPERATION_FIRST_PART + String.valueOf(operation) + REPLACE_OPERATION_SECOND_PART;
         Matcher matcher = Pattern.compile(regEx).matcher(command);
         while(matcher.find()){
-            int resultValue = 0;
+            String resultValue = "0";
             switch (operation) {
                 case '+':
-                    resultValue = Integer.parseInt(matcher.group(1)) + Integer.parseInt(matcher.group(2));
+                    resultValue = String.valueOf(Integer.parseInt(matcher.group(1)) + Integer.parseInt(matcher.group(2)));
                     break;
                 case '*':
-                    resultValue = Integer.parseInt(matcher.group(1)) * Integer.parseInt(matcher.group(2));
+                    resultValue = String.valueOf(Integer.parseInt(matcher.group(1)) * Integer.parseInt(matcher.group(2)));
                     break;
                 case '/':
-                    resultValue = Integer.parseInt(matcher.group(1)) / Integer.parseInt(matcher.group(2));
+                    resultValue = String.valueOf(Integer.parseInt(matcher.group(1)) / Integer.parseInt(matcher.group(2)));
                     break;
                 case '-':
-                    resultValue = Integer.parseInt(matcher.group(1)) - Integer.parseInt(matcher.group(2));
+                    resultValue = String.valueOf(Integer.parseInt(matcher.group(1)) - Integer.parseInt(matcher.group(2)));
+                    break;
+                case '=':
+                    resultValue = "(" + String.valueOf(Integer.parseInt(matcher.group(1)) == Integer.parseInt(matcher.group(2))) + ")";
+                    break;
+                case '^':
+                    resultValue = "(" + String.valueOf(Integer.parseInt(matcher.group(1)) != Integer.parseInt(matcher.group(2))) + ")";
             }
-            command = command.replaceFirst(regEx, String.valueOf(resultValue));
+            command = command.replaceFirst(regEx, resultValue);
         }
         return command;
     }
@@ -190,5 +231,8 @@ public class Parser {
         command = command.replaceAll(COMMENT_ONE_Str, "\n");
         command = command.replaceAll(COMMENT_TWO_Str, "");
         return command;
+    }
+    private static boolean validatePrint(String command) {
+        return command.matches(PRINT_COMMAND);
     }
 }
