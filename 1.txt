@@ -4,3 +4,8 @@ moveX -5
 moveY -4    #ZCv #
 moveX #czc#6
 moveY -21
+PRINT "HAHA I WIN"
+IF 1 = 2 moveX 1 ELSE moveY 2
+IF 1 ^ 3 PRINT "1 != 3" ELSE PRINT "1 == 3"
+IF 1 ^ 1 PRINT "1 != 1" ELSE PRINT "1 == 1"
+PRINT "my coordinates are: MY_X, MY_Y"
