@@ -40,7 +40,7 @@ public class Main {
             }
         }       */
         try {
-            DocReader docReader = new DocReader("C:\\IDEA_Projects\\Robattle\\1.txt");
+            DocReader docReader = new DocReader("C:\\IDEA_Projects\\Robattle\\1.rbtl");
             map.addEntity(player1);
             map.consolePrintMap();
             while (docReader.perform(player1, map)) {
