@@ -44,7 +44,7 @@ public class Main {
             map.addEntity(player1);
             map.consolePrintMap();
             while (docReader.perform(player1, map)) {
-                map.consolePrintMap();
+                //map.consolePrintMap();
             }
         } catch (Exception e){
             e.printStackTrace();

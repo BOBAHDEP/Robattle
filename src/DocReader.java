@@ -37,7 +37,7 @@ public class DocReader {
                 return false;
             }
 //            try {
-                needNewCommand = Parser.parse(command, entity, map);
+              return needNewCommand = Parser.parse(command, entity, map);
 //            } catch (InputMismatchException e){
 //                throw new FileSystemException("Wrong string");
 //            }

@@ -23,7 +23,7 @@ public class Parser {
     //NaN
     private static final String VALIDATE_STRING_NAN = "^(Nan|\\s*)$";
     //IF ELSE
-    private static final String VALIDATE_STRING_IF_ELSE = "^(IF|IF\\s+)(\\()(\\s*)((FIELD)(\\[|\\s+\\[|\\[\\s+|\\s+\\[\\s+)(\\d+|-\\d+)\\s*(\\]|\\s+\\]|\\]\\s+)(\\[|\\s+\\[|\\[\\s+)(\\d+|-\\d+)(]|\\s+]|\\]\\s+)\\s*|\\s*true\\s*|\\s*false\\s*)\\)\\s*((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\d+|\\s+\\d+|\\s+\\d+\\s+)|\\s*PRINT\\s*\".*?\"\\s*)($|(ELSE|ELSE\\s+)((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\s+\\d+|\\d+)\\s*($)|\\s*PRINT\\s*\".*?\"\\s*$))";
+    private static final String VALIDATE_STRING_IF_ELSE = "^(IF|IF\\s+)(\\()(\\s*)((FIELD)(\\[|\\s+\\[|\\[\\s+|\\s+\\[\\s+)(\\d+|-\\d+)\\s*(\\]|\\s+\\]|\\]\\s+)(\\[|\\s+\\[|\\[\\s+)(\\d+|-\\d+)(]|\\s+]|\\]\\s+)\\s*|\\s*true\\s*|\\s*false\\s*)\\)\\s*((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\d+|\\s+\\d+|\\s+\\d+\\s+)|\\s*PRINT\\s*\".*?\"\\s*)($|(ELSE|ELSE\\s+)((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\s*\\d+\\s*|\\s*\\-d+\\s*)\\s*($)|\\s*PRINT\\s*\".*?\"\\s*$))";
     private static final String CHOOSE_COORDINATES_IF_ELSE = "\\[\\s*(.*?)\\s*\\]";   //FIELD[0][1] -> 0,1
     private static final String CHOOSE_FIRST_COMMAND_IF_ELSE = "\\)\\s*(.*?)($|\\s*E)";   //IF (FIELD[0][1]) moveX 1 ELSE moveY 3 -> moveX 1
     private static final String CHOOSE_SECOND_COMMAND_IN_IF_ELSE = "ELSE\\s*(.*?)\\s*$";    // -> moveY 3
@@ -44,6 +44,17 @@ public class Parser {
     private static final String COMMENT_TWO_Str = "#(.*?)#";
     //printout
     private static final String PRINT_COMMAND = "^\\s*PRINT\\s*\"(.*?)\"\\s*$";
+    //while
+    private static final String VALIDATE_STRING_WHILE = "^(WHILE|WHILE\\s+)(\\()(\\s*)((FIELD)(\\[|\\s+\\[|\\[\\s+|\\s+\\[\\s+)(\\d+|-\\d+)\\s*(\\]|\\s+\\]|\\]\\s+)(\\[|\\s+\\[|\\[\\s+)(\\d+|-\\d+)(]|\\s+]|\\]\\s+)\\s*|\\s*true\\s*|\\s*false\\s*)\\)\\s*(((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\d+|\\s+\\d+|\\s+\\d+\\s+)|\\s*PRINT\\s*\".*?\"\\s*)|\\{(\\s*((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\s*\\d+\\s*|\\s*-\\d+\\s*)|\\s*PRINT\\s*\".*?\"\\s*);)+\\s*})$";
+    private static final String CHOOSE_COMMAND_IN_WHILE = "\\)\\s*(.*?)$";
+    private static final String CHOOSE_COORDINATES_WHILE = "\\[\\s*(.*?)\\s*\\]";   //FIELD[0][1] -> 0,1
+
+    //multiple commands
+    private static final String VALIDATE_MULTIPLE_COMMANDS = "\\{(\\s*((moveX|MoveX|moveY|MoveY|attackX|attackY|AttackX|AttackX)(\\d+|\\s+\\d+|\\s+\\d+\\s+)|\\s*PRINT\\s*\".*?\"\\s*);)+\\}";
+    private static final String SEPARATE_MULTIPLE_COMMANDS = "(\\{|\\s*)(.*?);";
+
+    private static final String VALIDATE_JUST_MULTIPLE_COMMAND = "^\\s*\\{(.*?)\\}\\s*$";
+    private static final String SEPARATE_ALL_MULTIPLE_COMMANDS = "\\s*\\{(.*?)\\}\\s*";
 
     public static boolean parse(String command, Entity entity, PlayMap map) throws InputMismatchException{     //true - OK, next string
 
@@ -119,7 +130,61 @@ public class Parser {
             }
             String stringToPrint = matcher.group(1);
             entity.say(stringToPrint);
-        } else {
+        } else if (validateWhile(command)) {
+            if (command.contains("true")) {
+                if(command.contains("{")) {
+                    Matcher matcher = Pattern.compile(SEPARATE_ALL_MULTIPLE_COMMANDS).matcher(command);
+                    if(!matcher.find()) {
+                        throw new InputMismatchException();
+                    }
+                    String commands = matcher.group(1);
+                    performMultipleCommands(commands, entity, map);
+                    return false;
+                }
+                Matcher matcher = Pattern.compile(CHOOSE_COMMAND_IN_WHILE).matcher(command);
+                if(!matcher.find()) {
+                    throw new InputMismatchException(command);
+                }
+                performCommand(matcher.group(1), entity, map);
+                return false;
+            } else if (command.contains("false")) {
+                return true;
+            }
+            List<Integer> coordinates = new ArrayList<Integer>();   //WHILE (FIELD[0][1]) moveX 1 ELSE attack 2 -> 0,1
+            Matcher matcher = Pattern.compile(CHOOSE_COORDINATES_WHILE).matcher(command);
+            while(matcher.find()){
+                coordinates.add(Integer.parseInt(matcher.group(1)));
+            }
+            if (command.contains("{")) {
+                matcher = Pattern.compile(SEPARATE_ALL_MULTIPLE_COMMANDS).matcher(command);
+                if(!matcher.find()) {
+                    throw new InputMismatchException();
+                }
+                String commands = matcher.group(1);
+                if (map.isTaken(coordinates.get(0), coordinates.get(1))) {
+                    performMultipleCommands(commands, entity, map);
+                    return false;
+                }
+            }
+            matcher = Pattern.compile(CHOOSE_COMMAND_IN_WHILE).matcher(command);
+            if(!matcher.find()) {
+                throw new InputMismatchException();
+            }
+            String commandInWhile = matcher.group(1);
+            if (map.isTaken(coordinates.get(0), coordinates.get(1))) {
+                performCommand(commandInWhile, entity, map);
+                return false;
+            }
+            return true;
+
+        } else if (validateJustMultipleCommands(command)) {
+            if (validateMultipleCommands(command)) {
+                performMultipleCommands(command, entity, map);
+            } else {
+                throw new InputMismatchException(command);
+            }
+        }
+        else {
             throw new InputMismatchException(command + " #3");
         }
         return true;
@@ -234,5 +299,26 @@ public class Parser {
     }
     private static boolean validatePrint(String command) {
         return command.matches(PRINT_COMMAND);
+    }
+    private static boolean validateWhile(String command)  {
+        return command.matches(VALIDATE_STRING_WHILE);
+    }
+    private static boolean validateMultipleCommands(String command) {
+        return command.matches(VALIDATE_MULTIPLE_COMMANDS);
+    }
+    private static void performMultipleCommands (String command, Entity entity, PlayMap map) {
+        List<String> commands = new ArrayList<String>();
+        Matcher matcher = Pattern.compile(SEPARATE_MULTIPLE_COMMANDS).matcher(command);
+        while(matcher.find()){
+            commands.add(matcher.group(2));
+        }
+        for(String s: commands){
+            System.out.println(s);
+            System.out.println(entity.x + " " + entity.y);
+            performCommand(s, entity, map);
+        }
+    }
+    private static  boolean validateJustMultipleCommands (String command) {
+        return command.matches(VALIDATE_JUST_MULTIPLE_COMMAND);
     }
 }

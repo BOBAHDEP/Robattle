@@ -9,3 +9,5 @@ IF 1 = 2 moveX 1 ELSE moveY 2
 IF 1 ^ 3 PRINT "1 != 3" ELSE PRINT "1 == 3"
 IF 1 ^ 1 PRINT "1 != 1" ELSE PRINT "1 == 1"
 PRINT "my coordinates are: MY_X, MY_Y"
+{PRINT "asda"; PRINT "asdcasc"; PRINT "qwertyqwerty";}
+WHILE (FIELD[MY_X][MY_Y]) {PRINT "qwert111y"; moveY 10; PRINT "qwert111y"; moveY -1; PRINT "qwert111y"; moveY -1; PRINT "qwert111y"; moveY -1; }
